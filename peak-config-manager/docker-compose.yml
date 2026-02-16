@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  schema-server:
+    build: ./schema-server
+    container_name: peak-schema-server
+    restart: always
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/chat')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  values-server:
+    build: ./values-server
+    container_name: peak-values-server
+    restart: always
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/chat')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  bot-server:
+    build: ./bot-server
+    container_name: peak-bot-server
+    restart: always
+    ports:
+      - "5003:5003"
+    volumes:              
+      - ./data:/data      
+    depends_on:
+      schema-server:
+        condition: service_healthy
+      values-server:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+
+networks:
+  default:
+    driver: bridge
